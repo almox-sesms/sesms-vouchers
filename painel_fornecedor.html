@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel do Fornecedor — SES/MS</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f0f4f8;font-family:Arial,sans-serif;padding:16px;}
+.card{max-width:1000px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1);}
+.hdr{background:#1a5276;padding:20px 28px;color:#fff;}
+.hdr h1{font-size:20px;font-weight:bold;}
+.hdr p{font-size:13px;color:#aed6f1;margin-top:4px;}
+.body{padding:24px;}
+.busca{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+.busca input{flex:1;min-width:200px;padding:11px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;}
+.busca button{background:#1a5276;color:#fff;border:none;padding:11px 20px;border-radius:8px;font-size:14px;cursor:pointer;}
+.resumo{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.r-item{flex:1;min-width:90px;border-radius:8px;padding:14px;text-align:center;}
+.r-item .lbl{font-size:11px;color:#777;text-transform:uppercase;}
+.r-item .val{font-size:26px;font-weight:bold;margin-top:4px;}
+.r-pend{background:#eaf4fb;} .r-pend .val{color:#1a5276;}
+.r-util{background:#eafaf1;} .r-util .val{color:#1a7a1a;}
+.r-tot{background:#f8f9fa;} .r-tot .val{color:#2c3e50;}
+.filtros{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;padding:14px;background:#f8f9fa;border-radius:8px;align-items:flex-end;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:12px;color:#555;font-weight:bold;}
+.fg select,.fg input{padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;outline:none;}
+.fbtns{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;}
+.fbtn{padding:9px 14px;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:bold;}
+.fb-fil{background:#1a5276;color:#fff;}
+.fb-lim{background:#fff;color:#555;border:1px solid #ddd;}
+.fb-exp{background:#1a7a1a;color:#fff;}
+.tabela-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
+thead tr{background:#1a5276;color:#fff;}
+th,td{padding:10px 12px;text-align:left;}
+tbody tr:nth-child(even){background:#f8f9fa;}
+.bp{background:#eaf4fb;color:#1a5276;padding:3px 10px;border-radius:20px;font-size:12px;}
+.bu{background:#eafaf1;color:#1a7a1a;padding:3px 10px;border-radius:20px;font-size:12px;}
+.btn-c{background:#1a5276;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;font-size:12px;}
+.vazio{color:#888;text-align:center;padding:32px 0;font-size:14px;}
+#loading{text-align:center;padding:32px;color:#1a5276;font-size:15px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="hdr">
+    <h1>Painel do Fornecedor</h1>
+    <p>Secretaria de Estado de Saude de Mato Grosso do Sul</p>
+  </div>
+  <div class="body">
+    <div class="busca">
+      <input type="email" id="inp-email" placeholder="Digite seu e-mail de fornecedor">
+      <button onclick="buscar()">Buscar</button>
+    </div>
+    <div id="loading" style="display:none;">Carregando dados...</div>
+    <div id="inicio" class="vazio">Digite seu e-mail e clique em Buscar.</div>
+    <div id="conteudo" style="display:none;">
+      <div class="resumo">
+        <div class="r-item r-pend"><div class="lbl">Pendentes</div><div class="val" id="cp">0</div></div>
+        <div class="r-item r-util"><div class="lbl">Utilizados</div><div class="val" id="cu">0</div></div>
+        <div class="r-item r-tot"><div class="lbl">Total</div><div class="val" id="ct">0</div></div>
+      </div>
+      <div class="filtros">
+        <div class="fg"><label>Status</label>
+          <select id="fil-status">
+            <option value="">Todos</option>
+            <option value="Emitido">Pendentes</option>
+            <option value="Utilizado">Utilizados</option>
+          </select>
+        </div>
+        <div class="fg"><label>Setor</label>
+          <input type="text" id="fil-setor" placeholder="nome do setor">
+        </div>
+        <div class="fg"><label>Data utilizacao De</label><input type="date" id="fil-de"></div>
+        <div class="fg"><label>Data utilizacao Ate</label><input type="date" id="fil-ate"></div>
+        <div class="fbtns">
+          <button class="fbtn fb-fil" onclick="filtrar()">Filtrar</button>
+          <button class="fbtn fb-lim" onclick="limpar()">Limpar</button>
+          <button class="fbtn fb-exp" onclick="exportar()">Exportar CSV</button>
+        </div>
+      </div>
+      <div id="sem-resultado" class="vazio" style="display:none;">Nenhum voucher encontrado.</div>
+      <div class="tabela-wrap">
+        <table id="tabela" style="display:none;">
+          <thead><tr>
+            <th>Codigo</th><th>Setor</th><th>Responsavel</th><th>Endereco</th>
+            <th>Data Aprovacao</th><th>Status</th><th>Data Utilizacao</th><th>Acao</th>
+          </tr></thead>
+          <tbody id="corpo"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+var SHEET_ID  = "1MXipIxNhCNNY3C7I3d8oJbqC40i3EvyjuIJqDnNHBms";
+var SHEET_ABA = "Vouchers";
+var URL_CONF  = "https://script.google.com/macros/s/AKfycbygcObDL9H5nhoFVtoaUjmfyji-RbR6OcQ7q4dD7VP4uJpU6m23FyjQojxQhlgOh1cMmA/exec";
+var TODOS = [], FILTRADOS = [], EMAIL_ATUAL = "";
+
+function getParam(n){ return new URL(window.location.href).searchParams.get(n)||""; }
+
+function parseCSV(text) {
+  var rows=[], lines=text.split('\n');
+  for(var i=0;i<lines.length;i++){
+    var line=lines[i].trim(); if(!line) continue;
+    var cols=[],cur='',inQ=false;
+    for(var j=0;j<line.length;j++){
+      var c=line[j];
+      if(c==='"'){if(inQ&&line[j+1]==='"'){cur+='"';j++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){cols.push(cur);cur='';}
+      else cur+=c;
+    }
+    cols.push(cur); rows.push(cols);
+  }
+  return rows;
+}
+
+function parseData(s){
+  if(!s) return null;
+  var p=s.split(/[\s\/\-:]/);
+  if(p.length<3) return null;
+  return p[0].length===4?new Date(+p[0],+p[1]-1,+p[2]):new Date(+p[2],+p[1]-1,+p[0]);
+}
+
+function buscar(){
+  var email=document.getElementById('inp-email').value.trim();
+  if(!email){alert('Digite seu e-mail.');return;}
+  EMAIL_ATUAL=email;
+  document.getElementById('inicio').style.display='none';
+  document.getElementById('conteudo').style.display='none';
+  document.getElementById('loading').style.display='block';
+  var url="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet="+encodeURIComponent(SHEET_ABA);
+  fetch(url).then(function(r){return r.text();}).then(function(csv){
+    document.getElementById('loading').style.display='none';
+    var rows=parseCSV(csv);
+    TODOS=rows.length<2?[]:rows.slice(1)
+      .filter(function(r){return r[11]&&r[11].trim().toLowerCase()===email.trim().toLowerCase();})
+      .map(function(r){return{codigo:r[0]||"",setor:r[2]||"",responsavel:r[3]||"",endereco:r[7]||"",dataAprov:r[8]||"",status:r[9]||"",dataUtil:r[10]||""};});
+    FILTRADOS=TODOS.slice();
+    atualizarResumo();
+    document.getElementById('conteudo').style.display='block';
+    renderTabela(FILTRADOS);
+  }).catch(function(err){
+    document.getElementById('loading').style.display='none';
+    document.getElementById('inicio').style.display='block';
+    document.getElementById('inicio').textContent='Erro: '+err.message;
+  });
+}
+
+function atualizarResumo(){
+  var p=TODOS.filter(function(r){return r.status==='Emitido';}).length;
+  var u=TODOS.filter(function(r){return r.status==='Utilizado';}).length;
+  document.getElementById('cp').textContent=p;
+  document.getElementById('cu').textContent=u;
+  document.getElementById('ct').textContent=TODOS.length;
+}
+
+function filtrar(){
+  var st=document.getElementById('fil-status').value;
+  var se=document.getElementById('fil-setor').value.trim().toLowerCase();
+  var de=document.getElementById('fil-de').value;
+  var at=document.getElementById('fil-ate').value;
+  FILTRADOS=TODOS.filter(function(r){
+    if(st&&r.status!==st) return false;
+    if(se&&r.setor.toLowerCase().indexOf(se)===-1) return false;
+    if(de||at){var dt=parseData(r.dataUtil);if(!dt)return false;
+      if(de&&dt<new Date(de+'T00:00:00'))return false;
+      if(at&&dt>new Date(at+'T23:59:59'))return false;}
+    return true;
+  });
+  renderTabela(FILTRADOS);
+}
+
+function limpar(){
+  ['fil-status','fil-setor','fil-de','fil-ate'].forEach(function(id){document.getElementById(id).value='';});
+  FILTRADOS=TODOS.slice(); renderTabela(FILTRADOS);
+}
+
+function renderTabela(rows){
+  var sem=document.getElementById('sem-resultado'),tab=document.getElementById('tabela');
+  if(rows.length===0){sem.style.display='block';tab.style.display='none';document.getElementById('corpo').innerHTML='';return;}
+  sem.style.display='none'; tab.style.display='table';
+  document.getElementById('corpo').innerHTML=rows.map(function(r){
+    var badge=r.status==='Utilizado'?'<span class="bu">Utilizado</span>':'<span class="bp">Pendente</span>';
+    var acao=r.status==='Utilizado'?'<span style="color:#aaa;">—</span>':'<a class="btn-c" href="'+URL_CONF+'?codigo='+encodeURIComponent(r.codigo)+'&tipo=fornecedor">Confirmar</a>';
+    return '<tr><td style="font-family:monospace;color:#1a5276;font-size:12px;">'+r.codigo+'</td><td>'+r.setor+'</td><td>'+r.responsavel+'</td><td>'+r.endereco+'</td><td style="font-size:12px;">'+r.dataAprov+'</td><td>'+badge+'</td><td style="font-size:12px;">'+(r.dataUtil||'—')+'</td><td>'+acao+'</td></tr>';
+  }).join('');
+}
+
+function exportar(){
+  if(FILTRADOS.length===0){alert('Nenhum dado para exportar.');return;}
+  var h=['Codigo','Setor','Responsavel','Endereco','Data Aprovacao','Status','Data Utilizacao'];
+  var l=FILTRADOS.map(function(r){return[r.codigo,r.setor,r.responsavel,r.endereco,r.dataAprov,r.status,r.dataUtil||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.join(',')+'\n'+l.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download='vouchers_'+EMAIL_ATUAL+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+window.onload=function(){
+  var email=getParam('email');
+  if(email){document.getElementById('inp-email').value=email;buscar();}
+};
+</script>
+</body>
+</html>
