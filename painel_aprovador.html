@@ -8,10 +8,20 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#f0f4f8;font-family:Arial,sans-serif;padding:16px;}
 .card{max-width:1100px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1);}
-.hdr{background:#154360;padding:20px 28px;color:#fff;}
+.hdr{background:#154360;padding:20px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
 .hdr h1{font-size:20px;font-weight:bold;}
 .hdr p{font-size:13px;color:#aed6f1;margin-top:4px;}
+.hdr .sair{background:transparent;color:#fff;border:1px solid #aed6f1;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;}
 .body{padding:24px;}
+.login{max-width:380px;margin:12px auto 8px;}
+.login h2{font-size:17px;color:#154360;margin-bottom:6px;}
+.login p.sub{font-size:13px;color:#777;margin-bottom:18px;line-height:1.4;}
+.login label{display:block;font-size:12px;color:#555;font-weight:bold;margin:12px 0 5px;}
+.login input{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;}
+.login input:focus{border-color:#154360;}
+.login button{width:100%;margin-top:18px;background:#154360;color:#fff;border:none;padding:13px;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;}
+.login button:disabled{opacity:.6;cursor:default;}
+.erro{display:none;margin-top:14px;background:#fdecea;color:#a93226;border-radius:6px;padding:10px 12px;font-size:13px;}
 .resumo{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .r-item{flex:1;min-width:90px;border-radius:8px;padding:14px;text-align:center;}
 .r-item .lbl{font-size:11px;color:#777;text-transform:uppercase;}
@@ -28,6 +38,7 @@ body{background:#f0f4f8;font-family:Arial,sans-serif;padding:16px;}
 .fb-fil{background:#154360;color:#fff;}
 .fb-lim{background:#fff;color:#555;border:1px solid #ddd;}
 .fb-exp{background:#1a7a1a;color:#fff;}
+.fb-atu{background:#fff;color:#154360;border:1px solid #154360;}
 .tabela-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:700px;}
 thead tr{background:#154360;color:#fff;}
@@ -36,17 +47,29 @@ tbody tr:nth-child(even){background:#f8f9fa;}
 .bp{background:#eaf4fb;color:#1a5276;padding:3px 10px;border-radius:20px;font-size:12px;}
 .bu{background:#eafaf1;color:#1a7a1a;padding:3px 10px;border-radius:20px;font-size:12px;}
 .vazio{color:#888;text-align:center;padding:32px 0;font-size:14px;}
-#loading{text-align:center;padding:32px;color:#154360;font-size:15px;}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="hdr">
-    <h1>Painel do Aprovador</h1>
-    <p>Secretaria de Estado de Saude de Mato Grosso do Sul — Almoxarifado Central SES/MS</p>
+    <div>
+      <h1>Painel do Aprovador</h1>
+      <p>Secretaria de Estado de Saude de Mato Grosso do Sul — Almoxarifado Central SES/MS</p>
+    </div>
+    <button class="sair" id="btn-sair" style="display:none;" onclick="sair()">Sair</button>
   </div>
   <div class="body">
-    <div id="loading">Carregando todos os vouchers...</div>
+
+    <form class="login" id="tela-login" onsubmit="entrar(event)">
+      <h2>Acesso do Almoxarifado</h2>
+      <p class="sub">Digite a senha do painel do aprovador.</p>
+      <input type="text" name="username" value="almoxarifado" autocomplete="username" style="display:none;" aria-hidden="true">
+      <label for="inp-senha">Senha</label>
+      <input type="password" id="inp-senha" autocomplete="current-password" required>
+      <button type="submit" id="btn-entrar">Entrar</button>
+      <div class="erro" id="msg-erro"></div>
+    </form>
+
     <div id="conteudo" style="display:none;">
       <div class="resumo">
         <div class="r-item r-pend"><div class="lbl">Pendentes</div><div class="val" id="cp">0</div></div>
@@ -73,6 +96,7 @@ tbody tr:nth-child(even){background:#f8f9fa;}
           <button class="fbtn fb-fil" onclick="filtrar()">Filtrar</button>
           <button class="fbtn fb-lim" onclick="limpar()">Limpar</button>
           <button class="fbtn fb-exp" onclick="exportar()">Exportar CSV</button>
+          <button class="fbtn fb-atu" id="btn-atu" onclick="atualizar()">Atualizar</button>
         </div>
       </div>
       <div id="sem-resultado" class="vazio" style="display:none;">Nenhum voucher encontrado.</div>
@@ -90,151 +114,125 @@ tbody tr:nth-child(even){background:#f8f9fa;}
 </div>
 
 <script>
-var SHEET_ID  = "1MXipIxNhCNNY3C7I3d8oJbqC40i3EvyjuIJqDnNHBms";
-var SHEET_ABA = "Vouchers";
-var TODOS = [];
-var FILTRADOS = [];
+// Endereço do Apps Script. Os dados só saem com a senha correta (conferida no servidor).
+var API_URL = "https://script.google.com/macros/s/AKfycbygcObDL9H5nhoFVtoaUjmfyji-RbR6OcQ7q4dD7VP4uJpU6m23FyjQojxQhlgOh1cMmA/exec";
+var TODOS = [], FILTRADOS = [], SENHA = null;
 
-function parseCSV(text) {
-  var rows = [];
-  var lines = text.split('\n');
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) continue;
-    var cols = [];
-    var cur = '';
-    var inQ = false;
-    for (var j = 0; j < line.length; j++) {
-      var c = line[j];
-      if (c === '"') {
-        if (inQ && line[j+1] === '"') { cur += '"'; j++; }
-        else inQ = !inQ;
-      } else if (c === ',' && !inQ) {
-        cols.push(cur); cur = '';
-      } else {
-        cur += c;
-      }
-    }
-    cols.push(cur);
-    rows.push(cols);
-  }
-  return rows;
+function $(id){ return document.getElementById(id); }
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+function chamarApi(payload){
+  return fetch(API_URL,{method:'POST',body:JSON.stringify(payload)})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
 }
 
-function parseData(str) {
-  if (!str) return null;
-  var p = str.split(/[\s\/\-:]/);
-  if (p.length < 3) return null;
-  if (p[0].length === 4) return new Date(+p[0], +p[1]-1, +p[2]);
-  return new Date(+p[2], +p[1]-1, +p[0]);
+function mostrarErro(msg){ var e=$('msg-erro'); e.textContent=msg; e.style.display='block'; }
+
+function entrar(ev){
+  if(ev) ev.preventDefault();
+  var senha=$('inp-senha').value;
+  if(!senha){ mostrarErro('Digite a senha.'); return; }
+  $('msg-erro').style.display='none';
+  $('btn-entrar').disabled=true; $('btn-entrar').textContent='Verificando...';
+  chamarApi({tipo:'aprovador',senha:senha}).then(function(res){
+    $('btn-entrar').disabled=false; $('btn-entrar').textContent='Entrar';
+    if(!res.ok){ mostrarErro(res.erro||'Não foi possível entrar.'); return; }
+    SENHA=senha; $('inp-senha').value='';
+    carregar(res);
+  }).catch(function(){
+    $('btn-entrar').disabled=false; $('btn-entrar').textContent='Entrar';
+    mostrarErro('Sem conexão com o sistema. Verifique a internet e tente de novo.');
+  });
 }
 
-function carregarDados() {
-  var url = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&sheet=" + encodeURIComponent(SHEET_ABA);
-  fetch(url)
-    .then(function(r) { return r.text(); })
-    .then(function(csv) {
-      var rows = parseCSV(csv);
-      TODOS = rows.length < 2 ? [] : rows.slice(1).map(function(r) {
-        return {
-          codigo:      r[0]  || "",
-          setor:       r[2]  || "",
-          responsavel: r[3]  || "",
-          endereco:    r[7]  || "",
-          dataAprov:   r[8]  || "",
-          status:      r[9]  || "",
-          dataUtil:    r[10] || "",
-          fornecedor:  r[11] || ""
-        };
-      });
-      FILTRADOS = TODOS.slice();
-      atualizarResumo();
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('conteudo').style.display = 'block';
-      renderTabela(FILTRADOS);
-    })
-    .catch(function(err) {
-      document.getElementById('loading').textContent = 'Erro ao carregar: ' + err.message;
-    });
+function carregar(res){
+  TODOS=res.vouchers||[];
+  $('tela-login').style.display='none';
+  $('btn-sair').style.display='inline-block';
+  $('conteudo').style.display='block';
+  atualizarResumo();
+  filtrar();
 }
 
-function atualizarResumo() {
-  var pend = TODOS.filter(function(r){return r.status==='Emitido';}).length;
-  var util = TODOS.filter(function(r){return r.status==='Utilizado';}).length;
-  document.getElementById('cp').textContent = pend;
-  document.getElementById('cu').textContent = util;
-  document.getElementById('ct').textContent = TODOS.length;
+function atualizar(){
+  if(!SENHA) return;
+  var b=$('btn-atu'); b.disabled=true; b.textContent='Atualizando...';
+  chamarApi({tipo:'aprovador',senha:SENHA}).then(function(res){
+    b.disabled=false; b.textContent='Atualizar';
+    if(res.ok) carregar(res); else { sair(); mostrarErro(res.erro); }
+  }).catch(function(){ b.disabled=false; b.textContent='Atualizar'; alert('Sem conexão com o sistema.'); });
 }
 
-function filtrar() {
-  var status = document.getElementById('fil-status').value;
-  var forn   = document.getElementById('fil-forn').value.trim().toLowerCase();
-  var setor  = document.getElementById('fil-setor').value.trim().toLowerCase();
-  var de     = document.getElementById('fil-de').value;
-  var ate    = document.getElementById('fil-ate').value;
-  FILTRADOS = TODOS.filter(function(r) {
-    if (status && r.status !== status) return false;
-    if (forn && r.fornecedor.toLowerCase().indexOf(forn) === -1) return false;
-    if (setor && r.setor.toLowerCase().indexOf(setor) === -1) return false;
-    if (de || ate) {
-      var dt = parseData(r.dataUtil);
-      if (!dt) return false;
-      if (de && dt < new Date(de + 'T00:00:00')) return false;
-      if (ate && dt > new Date(ate + 'T23:59:59')) return false;
-    }
+function sair(){
+  SENHA=null; TODOS=[]; FILTRADOS=[];
+  $('corpo').innerHTML='';
+  $('conteudo').style.display='none';
+  $('btn-sair').style.display='none';
+  $('tela-login').style.display='block';
+}
+
+function parseData(str){
+  if(!str) return null;
+  var p=str.split(/[\s\/\-:]/);
+  if(p.length<3) return null;
+  return p[0].length===4?new Date(+p[0],+p[1]-1,+p[2]):new Date(+p[2],+p[1]-1,+p[0]);
+}
+
+function atualizarResumo(){
+  $('cp').textContent=TODOS.filter(function(r){return r.status==='Emitido';}).length;
+  $('cu').textContent=TODOS.filter(function(r){return r.status==='Utilizado';}).length;
+  $('ct').textContent=TODOS.length;
+}
+
+function filtrar(){
+  var status=$('fil-status').value, forn=$('fil-forn').value.trim().toLowerCase();
+  var setor=$('fil-setor').value.trim().toLowerCase(), de=$('fil-de').value, ate=$('fil-ate').value;
+  FILTRADOS=TODOS.filter(function(r){
+    if(status&&r.status!==status) return false;
+    if(forn&&r.fornecedor.toLowerCase().indexOf(forn)===-1) return false;
+    if(setor&&r.setor.toLowerCase().indexOf(setor)===-1) return false;
+    if(de||ate){var dt=parseData(r.dataUtil);if(!dt)return false;
+      if(de&&dt<new Date(de+'T00:00:00'))return false;
+      if(ate&&dt>new Date(ate+'T23:59:59'))return false;}
     return true;
   });
   renderTabela(FILTRADOS);
 }
 
-function limpar() {
-  document.getElementById('fil-status').value = '';
-  document.getElementById('fil-forn').value = '';
-  document.getElementById('fil-setor').value = '';
-  document.getElementById('fil-de').value = '';
-  document.getElementById('fil-ate').value = '';
-  FILTRADOS = TODOS.slice();
-  renderTabela(FILTRADOS);
+function limpar(){
+  ['fil-status','fil-forn','fil-setor','fil-de','fil-ate'].forEach(function(id){$(id).value='';});
+  filtrar();
 }
 
-function renderTabela(rows) {
-  var sem = document.getElementById('sem-resultado');
-  var tab = document.getElementById('tabela');
-  if (rows.length === 0) {
-    sem.style.display = 'block'; tab.style.display = 'none';
-    document.getElementById('corpo').innerHTML = ''; return;
-  }
-  sem.style.display = 'none'; tab.style.display = 'table';
-  document.getElementById('corpo').innerHTML = rows.map(function(r) {
-    var badge = r.status === 'Utilizado'
-      ? '<span class="bu">Utilizado</span>'
-      : '<span class="bp">Pendente</span>';
-    return '<tr>'
-      + '<td style="font-family:monospace;color:#1a5276;font-size:12px;">' + r.codigo + '</td>'
-      + '<td>' + r.setor + '</td><td>' + r.responsavel + '</td><td>' + r.endereco + '</td>'
-      + '<td style="font-size:12px;">' + r.fornecedor + '</td>'
-      + '<td style="font-size:12px;">' + r.dataAprov + '</td>'
-      + '<td>' + badge + '</td>'
-      + '<td style="font-size:12px;">' + (r.dataUtil || '—') + '</td>'
-      + '</tr>';
+function renderTabela(rows){
+  var sem=$('sem-resultado'), tab=$('tabela');
+  if(rows.length===0){sem.style.display='block';tab.style.display='none';$('corpo').innerHTML='';return;}
+  sem.style.display='none'; tab.style.display='table';
+  $('corpo').innerHTML=rows.map(function(r){
+    var badge=r.status==='Utilizado'?'<span class="bu">Utilizado</span>':'<span class="bp">Pendente</span>';
+    return '<tr><td style="font-family:monospace;color:#1a5276;font-size:12px;">'+esc(r.codigo)+'</td>'
+      +'<td>'+esc(r.setor)+'</td><td>'+esc(r.responsavel)+'</td><td>'+esc(r.endereco)+'</td>'
+      +'<td style="font-size:12px;">'+esc(r.fornecedor)+'</td>'
+      +'<td style="font-size:12px;">'+esc(r.dataAprov)+'</td>'
+      +'<td>'+badge+'</td>'
+      +'<td style="font-size:12px;">'+(esc(r.dataUtil)||'—')+'</td></tr>';
   }).join('');
 }
 
-function exportar() {
-  if (FILTRADOS.length === 0) { alert('Nenhum dado para exportar.'); return; }
-  var h = ['Codigo','Setor','Responsavel','Endereco','Fornecedor','Data Aprovacao','Status','Data Utilizacao'];
-  var l = FILTRADOS.map(function(r) {
-    return [r.codigo, r.setor, r.responsavel, r.endereco, r.fornecedor, r.dataAprov, r.status, r.dataUtil||'']
-      .map(function(v){ return '"' + String(v).replace(/"/g,'""') + '"'; }).join(',');
+function exportar(){
+  if(FILTRADOS.length===0){alert('Nenhum dado para exportar.');return;}
+  var h=['Codigo','Setor','Responsavel','Endereco','Fornecedor','Data Aprovacao','Status','Data Utilizacao'];
+  var l=FILTRADOS.map(function(r){
+    return [r.codigo,r.setor,r.responsavel,r.endereco,r.fornecedor,r.dataAprov,r.status,r.dataUtil||'']
+      .map(function(v){return '"'+String(v).replace(/"/g,'""')+'"';}).join(',');
   });
-  var blob = new Blob(['\uFEFF' + h.join(',') + '\n' + l.join('\n')], {type:'text/csv;charset=utf-8;'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'vouchers_aprovador_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+h.join(',')+'\n'+l.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download='vouchers_aprovador_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-window.onload = carregarDados;
+window.onload=function(){ $('inp-senha').focus(); };
 </script>
 </body>
 </html>

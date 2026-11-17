@@ -8,13 +8,23 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#f0f4f8;font-family:Arial,sans-serif;padding:16px;}
 .card{max-width:1000px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.1);}
-.hdr{background:#1a5276;padding:20px 28px;color:#fff;}
+.hdr{background:#1a5276;padding:20px 28px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
 .hdr h1{font-size:20px;font-weight:bold;}
 .hdr p{font-size:13px;color:#aed6f1;margin-top:4px;}
+.hdr .sair{background:transparent;color:#fff;border:1px solid #aed6f1;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;}
 .body{padding:24px;}
-.busca{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
-.busca input{flex:1;min-width:200px;padding:11px 14px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;}
-.busca button{background:#1a5276;color:#fff;border:none;padding:11px 20px;border-radius:8px;font-size:14px;cursor:pointer;}
+.login{max-width:380px;margin:12px auto 8px;}
+.login h2{font-size:17px;color:#1a5276;margin-bottom:6px;}
+.login p.sub{font-size:13px;color:#777;margin-bottom:18px;line-height:1.4;}
+.login label{display:block;font-size:12px;color:#555;font-weight:bold;margin:12px 0 5px;}
+.login input{width:100%;padding:12px 14px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;}
+.login input:focus{border-color:#1a5276;}
+.login input.pin{letter-spacing:10px;text-align:center;font-size:22px;font-family:monospace;}
+.login button{width:100%;margin-top:18px;background:#1a5276;color:#fff;border:none;padding:13px;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;}
+.login button:disabled{opacity:.6;cursor:default;}
+.erro{display:none;margin-top:14px;background:#fdecea;color:#a93226;border-radius:6px;padding:10px 12px;font-size:13px;}
+.ola{font-size:14px;color:#555;margin-bottom:16px;}
+.ola strong{color:#1a5276;}
 .resumo{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .r-item{flex:1;min-width:90px;border-radius:8px;padding:14px;text-align:center;}
 .r-item .lbl{font-size:11px;color:#777;text-transform:uppercase;}
@@ -31,6 +41,7 @@ body{background:#f0f4f8;font-family:Arial,sans-serif;padding:16px;}
 .fb-fil{background:#1a5276;color:#fff;}
 .fb-lim{background:#fff;color:#555;border:1px solid #ddd;}
 .fb-exp{background:#1a7a1a;color:#fff;}
+.fb-atu{background:#fff;color:#1a5276;border:1px solid #1a5276;}
 .tabela-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
 thead tr{background:#1a5276;color:#fff;}
@@ -40,23 +51,32 @@ tbody tr:nth-child(even){background:#f8f9fa;}
 .bu{background:#eafaf1;color:#1a7a1a;padding:3px 10px;border-radius:20px;font-size:12px;}
 .btn-c{background:#1a5276;color:#fff;padding:6px 12px;border-radius:4px;text-decoration:none;font-size:12px;}
 .vazio{color:#888;text-align:center;padding:32px 0;font-size:14px;}
-#loading{text-align:center;padding:32px;color:#1a5276;font-size:15px;}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="hdr">
-    <h1>Painel do Fornecedor</h1>
-    <p>Secretaria de Estado de Saude de Mato Grosso do Sul</p>
+    <div>
+      <h1>Painel do Fornecedor</h1>
+      <p>Secretaria de Estado de Saude de Mato Grosso do Sul</p>
+    </div>
+    <button class="sair" id="btn-sair" style="display:none;" onclick="sair()">Sair</button>
   </div>
   <div class="body">
-    <div class="busca">
-      <input type="email" id="inp-email" placeholder="Digite seu e-mail de fornecedor">
-      <button onclick="buscar()">Buscar</button>
-    </div>
-    <div id="loading" style="display:none;">Carregando dados...</div>
-    <div id="inicio" class="vazio">Digite seu e-mail e clique em Buscar.</div>
+
+    <form class="login" id="tela-login" onsubmit="entrar(event)">
+      <h2>Acesso do fornecedor</h2>
+      <p class="sub">Use o e-mail cadastrado no Almoxarifado e o seu PIN de 4 dígitos (o mesmo da confirmação de entrega).</p>
+      <label for="inp-email">E-mail</label>
+      <input type="email" id="inp-email" autocomplete="username" placeholder="seu e-mail de fornecedor" required>
+      <label for="inp-pin">PIN</label>
+      <input type="password" id="inp-pin" class="pin" inputmode="numeric" autocomplete="current-password" maxlength="4" placeholder="••••" required>
+      <button type="submit" id="btn-entrar">Entrar</button>
+      <div class="erro" id="msg-erro"></div>
+    </form>
+
     <div id="conteudo" style="display:none;">
+      <p class="ola">Fornecedor: <strong id="nome-forn"></strong></p>
       <div class="resumo">
         <div class="r-item r-pend"><div class="lbl">Pendentes</div><div class="val" id="cp">0</div></div>
         <div class="r-item r-util"><div class="lbl">Utilizados</div><div class="val" id="cu">0</div></div>
@@ -79,6 +99,7 @@ tbody tr:nth-child(even){background:#f8f9fa;}
           <button class="fbtn fb-fil" onclick="filtrar()">Filtrar</button>
           <button class="fbtn fb-lim" onclick="limpar()">Limpar</button>
           <button class="fbtn fb-exp" onclick="exportar()">Exportar CSV</button>
+          <button class="fbtn fb-atu" id="btn-atu" onclick="atualizar()">Atualizar</button>
         </div>
       </div>
       <div id="sem-resultado" class="vazio" style="display:none;">Nenhum voucher encontrado.</div>
@@ -95,27 +116,66 @@ tbody tr:nth-child(even){background:#f8f9fa;}
   </div>
 </div>
 <script>
-var SHEET_ID  = "1MXipIxNhCNNY3C7I3d8oJbqC40i3EvyjuIJqDnNHBms";
-var SHEET_ABA = "Vouchers";
-var URL_CONF  = "https://script.google.com/macros/s/AKfycbygcObDL9H5nhoFVtoaUjmfyji-RbR6OcQ7q4dD7VP4uJpU6m23FyjQojxQhlgOh1cMmA/exec";
-var TODOS = [], FILTRADOS = [], EMAIL_ATUAL = "";
+// Endereço do Apps Script (o mesmo das páginas de voucher). Os dados só saem com e-mail + PIN corretos.
+var API_URL  = "https://script.google.com/macros/s/AKfycbygcObDL9H5nhoFVtoaUjmfyji-RbR6OcQ7q4dD7VP4uJpU6m23FyjQojxQhlgOh1cMmA/exec";
+var URL_CONF = API_URL;
+var TODOS = [], FILTRADOS = [], CRED = null;
 
-function getParam(n){ return new URL(window.location.href).searchParams.get(n)||""; }
+function $(id){ return document.getElementById(id); }
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 
-function parseCSV(text) {
-  var rows=[], lines=text.split('\n');
-  for(var i=0;i<lines.length;i++){
-    var line=lines[i].trim(); if(!line) continue;
-    var cols=[],cur='',inQ=false;
-    for(var j=0;j<line.length;j++){
-      var c=line[j];
-      if(c==='"'){if(inQ&&line[j+1]==='"'){cur+='"';j++;}else inQ=!inQ;}
-      else if(c===','&&!inQ){cols.push(cur);cur='';}
-      else cur+=c;
-    }
-    cols.push(cur); rows.push(cols);
-  }
-  return rows;
+function chamarApi(payload){
+  // Corpo em texto puro: requisição simples, sem pré-verificação de CORS.
+  return fetch(API_URL,{method:'POST',body:JSON.stringify(payload)})
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+function mostrarErro(msg){ var e=$('msg-erro'); e.textContent=msg; e.style.display='block'; }
+
+function entrar(ev){
+  if(ev) ev.preventDefault();
+  var email=$('inp-email').value.trim(), pin=$('inp-pin').value.trim();
+  if(!email||!pin){ mostrarErro('Informe o e-mail e o PIN.'); return; }
+  $('msg-erro').style.display='none';
+  $('btn-entrar').disabled=true; $('btn-entrar').textContent='Verificando...';
+  chamarApi({tipo:'fornecedor',email:email,pin:pin}).then(function(res){
+    $('btn-entrar').disabled=false; $('btn-entrar').textContent='Entrar';
+    if(!res.ok){ mostrarErro(res.erro||'Não foi possível entrar.'); return; }
+    CRED={email:email,pin:pin};
+    $('inp-pin').value='';
+    carregar(res);
+  }).catch(function(){
+    $('btn-entrar').disabled=false; $('btn-entrar').textContent='Entrar';
+    mostrarErro('Sem conexão com o sistema. Verifique a internet e tente de novo.');
+  });
+}
+
+function carregar(res){
+  TODOS=res.vouchers||[];
+  $('nome-forn').textContent=(res.nome?res.nome+' — ':'')+(res.email||CRED.email);
+  $('tela-login').style.display='none';
+  $('btn-sair').style.display='inline-block';
+  $('conteudo').style.display='block';
+  atualizarResumo();
+  filtrar();
+}
+
+function atualizar(){
+  if(!CRED) return;
+  var b=$('btn-atu'); b.disabled=true; b.textContent='Atualizando...';
+  chamarApi({tipo:'fornecedor',email:CRED.email,pin:CRED.pin}).then(function(res){
+    b.disabled=false; b.textContent='Atualizar';
+    if(res.ok) carregar(res); else { sair(); mostrarErro(res.erro); }
+  }).catch(function(){ b.disabled=false; b.textContent='Atualizar'; alert('Sem conexão com o sistema.'); });
+}
+
+function sair(){
+  CRED=null; TODOS=[]; FILTRADOS=[];
+  $('corpo').innerHTML='';
+  $('conteudo').style.display='none';
+  $('btn-sair').style.display='none';
+  $('tela-login').style.display='block';
+  $('inp-pin').value='';
 }
 
 function parseData(s){
@@ -125,44 +185,15 @@ function parseData(s){
   return p[0].length===4?new Date(+p[0],+p[1]-1,+p[2]):new Date(+p[2],+p[1]-1,+p[0]);
 }
 
-function buscar(){
-  var email=document.getElementById('inp-email').value.trim();
-  if(!email){alert('Digite seu e-mail.');return;}
-  EMAIL_ATUAL=email;
-  document.getElementById('inicio').style.display='none';
-  document.getElementById('conteudo').style.display='none';
-  document.getElementById('loading').style.display='block';
-  var url="https://docs.google.com/spreadsheets/d/"+SHEET_ID+"/gviz/tq?tqx=out:csv&sheet="+encodeURIComponent(SHEET_ABA);
-  fetch(url).then(function(r){return r.text();}).then(function(csv){
-    document.getElementById('loading').style.display='none';
-    var rows=parseCSV(csv);
-    TODOS=rows.length<2?[]:rows.slice(1)
-      .filter(function(r){return r[11]&&r[11].trim().toLowerCase()===email.trim().toLowerCase();})
-      .map(function(r){return{codigo:r[0]||"",setor:r[2]||"",responsavel:r[3]||"",endereco:r[7]||"",dataAprov:r[8]||"",status:r[9]||"",dataUtil:r[10]||""};});
-    FILTRADOS=TODOS.slice();
-    atualizarResumo();
-    document.getElementById('conteudo').style.display='block';
-    renderTabela(FILTRADOS);
-  }).catch(function(err){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('inicio').style.display='block';
-    document.getElementById('inicio').textContent='Erro: '+err.message;
-  });
-}
-
 function atualizarResumo(){
-  var p=TODOS.filter(function(r){return r.status==='Emitido';}).length;
-  var u=TODOS.filter(function(r){return r.status==='Utilizado';}).length;
-  document.getElementById('cp').textContent=p;
-  document.getElementById('cu').textContent=u;
-  document.getElementById('ct').textContent=TODOS.length;
+  $('cp').textContent=TODOS.filter(function(r){return r.status==='Emitido';}).length;
+  $('cu').textContent=TODOS.filter(function(r){return r.status==='Utilizado';}).length;
+  $('ct').textContent=TODOS.length;
 }
 
 function filtrar(){
-  var st=document.getElementById('fil-status').value;
-  var se=document.getElementById('fil-setor').value.trim().toLowerCase();
-  var de=document.getElementById('fil-de').value;
-  var at=document.getElementById('fil-ate').value;
+  var st=$('fil-status').value, se=$('fil-setor').value.trim().toLowerCase();
+  var de=$('fil-de').value, at=$('fil-ate').value;
   FILTRADOS=TODOS.filter(function(r){
     if(st&&r.status!==st) return false;
     if(se&&r.setor.toLowerCase().indexOf(se)===-1) return false;
@@ -175,18 +206,18 @@ function filtrar(){
 }
 
 function limpar(){
-  ['fil-status','fil-setor','fil-de','fil-ate'].forEach(function(id){document.getElementById(id).value='';});
-  FILTRADOS=TODOS.slice(); renderTabela(FILTRADOS);
+  ['fil-status','fil-setor','fil-de','fil-ate'].forEach(function(id){$(id).value='';});
+  filtrar();
 }
 
 function renderTabela(rows){
-  var sem=document.getElementById('sem-resultado'),tab=document.getElementById('tabela');
-  if(rows.length===0){sem.style.display='block';tab.style.display='none';document.getElementById('corpo').innerHTML='';return;}
+  var sem=$('sem-resultado'),tab=$('tabela');
+  if(rows.length===0){sem.style.display='block';tab.style.display='none';$('corpo').innerHTML='';return;}
   sem.style.display='none'; tab.style.display='table';
-  document.getElementById('corpo').innerHTML=rows.map(function(r){
+  $('corpo').innerHTML=rows.map(function(r){
     var badge=r.status==='Utilizado'?'<span class="bu">Utilizado</span>':'<span class="bp">Pendente</span>';
-    var acao=r.status==='Utilizado'?'<span style="color:#aaa;">—</span>':'<a class="btn-c" href="'+URL_CONF+'?codigo='+encodeURIComponent(r.codigo)+'&tipo=fornecedor">Confirmar</a>';
-    return '<tr><td style="font-family:monospace;color:#1a5276;font-size:12px;">'+r.codigo+'</td><td>'+r.setor+'</td><td>'+r.responsavel+'</td><td>'+r.endereco+'</td><td style="font-size:12px;">'+r.dataAprov+'</td><td>'+badge+'</td><td style="font-size:12px;">'+(r.dataUtil||'—')+'</td><td>'+acao+'</td></tr>';
+    var acao=r.status==='Utilizado'?'<span style="color:#aaa;">—</span>':'<a class="btn-c" target="_blank" rel="noopener" href="'+URL_CONF+'?codigo='+encodeURIComponent(r.codigo)+'&tipo=fornecedor">Confirmar</a>';
+    return '<tr><td style="font-family:monospace;color:#1a5276;font-size:12px;">'+esc(r.codigo)+'</td><td>'+esc(r.setor)+'</td><td>'+esc(r.responsavel)+'</td><td>'+esc(r.endereco)+'</td><td style="font-size:12px;">'+esc(r.dataAprov)+'</td><td>'+badge+'</td><td style="font-size:12px;">'+(esc(r.dataUtil)||'—')+'</td><td>'+acao+'</td></tr>';
   }).join('');
 }
 
@@ -195,14 +226,14 @@ function exportar(){
   var h=['Codigo','Setor','Responsavel','Endereco','Data Aprovacao','Status','Data Utilizacao'];
   var l=FILTRADOS.map(function(r){return[r.codigo,r.setor,r.responsavel,r.endereco,r.dataAprov,r.status,r.dataUtil||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});
   var a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob(['\uFEFF'+h.join(',')+'\n'+l.join('\n')],{type:'text/csv;charset=utf-8;'}));
-  a.download='vouchers_'+EMAIL_ATUAL+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
+  a.href=URL.createObjectURL(new Blob(['﻿'+h.join(',')+'\n'+l.join('\n')],{type:'text/csv;charset=utf-8;'}));
+  a.download='vouchers_'+(CRED?CRED.email:'')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 window.onload=function(){
-  var email=getParam('email');
-  if(email){document.getElementById('inp-email').value=email;buscar();}
+  var email=new URL(window.location.href).searchParams.get('email');
+  if(email){ $('inp-email').value=email; $('inp-pin').focus(); } else { $('inp-email').focus(); }
 };
 </script>
 </body>
