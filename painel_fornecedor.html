@@ -106,7 +106,7 @@ tbody tr:nth-child(even){background:#f8f9fa;}
       <div class="tabela-wrap">
         <table id="tabela" style="display:none;">
           <thead><tr>
-            <th>Codigo</th><th>Setor</th><th>Responsavel</th><th>Endereco</th>
+            <th>Codigo</th><th>Setor</th><th>Responsavel</th>
             <th>Data Aprovacao</th><th>Status</th><th>Data Utilizacao</th><th>Acao</th>
           </tr></thead>
           <tbody id="corpo"></tbody>
@@ -217,14 +217,14 @@ function renderTabela(rows){
   $('corpo').innerHTML=rows.map(function(r){
     var badge=r.status==='Utilizado'?'<span class="bu">Utilizado</span>':'<span class="bp">Pendente</span>';
     var acao=r.status==='Utilizado'?'<span style="color:#aaa;">—</span>':'<a class="btn-c" target="_blank" rel="noopener" href="'+URL_CONF+'?codigo='+encodeURIComponent(r.codigo)+'&tipo=fornecedor">Confirmar</a>';
-    return '<tr><td style="font-family:monospace;color:#1a5276;font-size:12px;">'+esc(r.codigo)+'</td><td>'+esc(r.setor)+'</td><td>'+esc(r.responsavel)+'</td><td>'+esc(r.endereco)+'</td><td style="font-size:12px;">'+esc(r.dataAprov)+'</td><td>'+badge+'</td><td style="font-size:12px;">'+(esc(r.dataUtil)||'—')+'</td><td>'+acao+'</td></tr>';
+    return '<tr><td style="font-family:monospace;color:#1a5276;font-size:12px;">'+esc(r.codigo)+'</td><td>'+esc(r.setor)+'</td><td>'+esc(r.responsavel)+'</td><td style="font-size:12px;">'+esc(r.dataAprov)+'</td><td>'+badge+'</td><td style="font-size:12px;">'+(esc(r.dataUtil)||'—')+'</td><td>'+acao+'</td></tr>';
   }).join('');
 }
 
 function exportar(){
   if(FILTRADOS.length===0){alert('Nenhum dado para exportar.');return;}
-  var h=['Codigo','Setor','Responsavel','Endereco','Data Aprovacao','Status','Data Utilizacao'];
-  var l=FILTRADOS.map(function(r){return[r.codigo,r.setor,r.responsavel,r.endereco,r.dataAprov,r.status,r.dataUtil||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});
+  var h=['Codigo','Setor','Responsavel','Data Aprovacao','Status','Data Utilizacao'];
+  var l=FILTRADOS.map(function(r){return[r.codigo,r.setor,r.responsavel,r.dataAprov,r.status,r.dataUtil||''].map(function(v){return'"'+String(v).replace(/"/g,'""')+'"';}).join(',');});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob(['﻿'+h.join(',')+'\n'+l.join('\n')],{type:'text/csv;charset=utf-8;'}));
   a.download='vouchers_'+(CRED?CRED.email:'')+'_'+new Date().toISOString().slice(0,10)+'.csv';
