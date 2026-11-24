@@ -42,6 +42,10 @@ body{background:#f0f4f8;font-family:Arial,sans-serif;padding:16px;}
 .fb-lim{background:#fff;color:#555;border:1px solid #ddd;}
 .fb-exp{background:#1a7a1a;color:#fff;}
 .fb-atu{background:#fff;color:#1a5276;border:1px solid #1a5276;}
+.pesq{position:relative;margin-bottom:12px;}
+.pesq input{width:100%;padding:13px 14px;border:2px solid #d5dde5;border-radius:8px;font-size:15px;outline:none;}
+.pesq input:focus{border-color:#1a5276;}
+.conta{font-size:12px;color:#777;margin-bottom:10px;}
 .tabela-wrap{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:13px;min-width:560px;}
 thead tr{background:#1a5276;color:#fff;}
@@ -82,6 +86,7 @@ tbody tr:nth-child(even){background:#f8f9fa;}
         <div class="r-item r-util"><div class="lbl">Utilizados</div><div class="val" id="cu">0</div></div>
         <div class="r-item r-tot"><div class="lbl">Total</div><div class="val" id="ct">0</div></div>
       </div>
+      <div class="pesq"><input type="search" id="fil-busca" aria-label="Pesquisar vouchers" placeholder="Pesquisar por código, setor, responsável, data ou status" autocomplete="off" oninput="filtrar()"></div>
       <div class="filtros">
         <div class="fg"><label>Status</label>
           <select id="fil-status">
@@ -102,6 +107,7 @@ tbody tr:nth-child(even){background:#f8f9fa;}
           <button class="fbtn fb-atu" id="btn-atu" onclick="atualizar()">Atualizar</button>
         </div>
       </div>
+      <div class="conta" id="conta"></div>
       <div id="sem-resultado" class="vazio" style="display:none;">Nenhum voucher encontrado.</div>
       <div class="tabela-wrap">
         <table id="tabela" style="display:none;">
@@ -170,7 +176,7 @@ function atualizar(){
 }
 
 function sair(){
-  CRED=null; TODOS=[]; FILTRADOS=[];
+  CRED=null; TODOS=[]; FILTRADOS=[]; $('fil-busca').value='';
   $('corpo').innerHTML='';
   $('conteudo').style.display='none';
   $('btn-sair').style.display='none';
@@ -191,10 +197,16 @@ function atualizarResumo(){
   $('ct').textContent=TODOS.length;
 }
 
+// Minúsculas e sem acento, para a pesquisa achar "Saude" em "Saúde".
+function semAcento(v){ return String(v==null?'':v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+
 function filtrar(){
+  var termos=semAcento($('fil-busca').value).split(/\s+/).filter(Boolean);
   var st=$('fil-status').value, se=$('fil-setor').value.trim().toLowerCase();
   var de=$('fil-de').value, at=$('fil-ate').value;
   FILTRADOS=TODOS.filter(function(r){
+    if(termos.length){var txt=semAcento([r.codigo,r.setor,r.responsavel,r.dataAprov,r.status==='Utilizado'?'Utilizado':'Pendente',r.dataUtil].join(' '));
+      if(!termos.every(function(x){return txt.indexOf(x)!==-1;})) return false;}
     if(st&&r.status!==st) return false;
     if(se&&r.setor.toLowerCase().indexOf(se)===-1) return false;
     if(de||at){var dt=parseData(r.dataUtil);if(!dt)return false;
@@ -202,11 +214,12 @@ function filtrar(){
       if(at&&dt>new Date(at+'T23:59:59'))return false;}
     return true;
   });
+  $('conta').textContent='Mostrando '+FILTRADOS.length+' de '+TODOS.length+' vouchers';
   renderTabela(FILTRADOS);
 }
 
 function limpar(){
-  ['fil-status','fil-setor','fil-de','fil-ate'].forEach(function(id){$(id).value='';});
+  ['fil-busca','fil-status','fil-setor','fil-de','fil-ate'].forEach(function(id){$(id).value='';});
   filtrar();
 }
 
